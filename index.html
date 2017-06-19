@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>3D Mandelbrot</title>
+    <script src="/jquery_ui/external/jquery/jquery.js" type="text/javascript"></script>
+    <script src="/jquery_ui/jquery-ui.js" type="text/javascript"></script>
+    <link href="/jquery_ui/jquery-ui.css" rel="stylesheet">
+    <script type="text/javascript" src="three.js"></script>
+    <script type="text/javascript" src="GPGPU.js"></script>
+    <script type="text/javascript" src="OrbitControls3.js"></script>
+    <script id="plotter" type="x-shader/x-vertex">
+        uniform sampler2D textureResult[10];
+        uniform float cameraConstant;
+        uniform int parts;
+        void main(){
+            vec4 resTemp = texture2D( textureResult[0], uv );
+            vec3 pos = resTemp.xyz;
+			float res = resTemp.w;
+			vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0 );
+            float radius = 1.0;
+            if (res < 0.50) {
+                gl_PointSize = 0.0;
+            }
+            else {
+                gl_PointSize = radius * cameraConstant / ( - mvPosition.z );
+                gl_Position = projectionMatrix * mvPosition;
+            }
+
+        }
+
+
+
+
+
+
+    </script>
+    <script id="mandelbrotpoints" type="x-shader/x-fragment">
+        #include <common>
+        const int abs_max = 1000;
+        uniform int maxIters;
+        uniform int mode;
+        uniform int real_width;
+        uniform float zoom;
+		const float width = resolution.x;
+		const float height = resolution.y;
+        uniform vec3 pos_ref;
+        int isPoint(float cx, float cy, float cz)
+        {
+if (cx * cx + cy * cy + cz * cz > 4.0)
+               {
+                   //return 0;
+
+               }
+            float x = 0.0, y = 0.0, z = 0.0, tempx = 0.0, tempy = 0.0, tempz = 0.0;
+            float xQ = 0.0, yQ = 0.0, zQ = 0.0;
+            int i=0;
+            for (int i = 0; i < 100; i++)
+            {
+                xQ = x * x;
+                yQ = y * y;
+                zQ = z * z;
+
+
+               tempx = xQ - yQ - zQ + cx;
+               tempy = 2.0 * x * z + cy;
+               tempz = 2.0 * x * y + cz;
+
+               x = tempx;
+               y = tempy;
+               z = tempz;
+               if (x * x + y * y + z * z > 4.0)
+               {
+                   return 0;
+
+               }
+
+            }
+            if(i==101){
+                return 2;
+            }else{
+                return 3;
+            }
+        }
+
+        void main(){
+            vec2 posXY = gl_FragCoord.xy;
+            int div_mod=int(posXY.x)/real_width;
+            vec3 pos=vec3(
+            div_mod,
+            posXY.y,
+            int(posXY.x)-div_mod*real_width
+            );
+            float div=(float(real_width)*zoom);
+            float sub=(float(real_width)/2.0)/div;
+            vec3 pos_real=vec3(
+            pos.x/div-sub,
+            pos.y/div-sub,
+            pos.z/div-sub)+pos_ref;
+            int is=isPoint(pos_real.x,pos_real.y,pos_real.z);
+
+            gl_FragColor = vec4( pos_real,float(is));
+
+
+
+        }
+
+
+
+
+
+
+    </script>
+    <style>
+        html, body {
+            font-family: Arial;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .bottom_top {
+            position: fixed;
+            bottom: 1%;
+            right: 1%;
+            z-index: 99;
+        }
+
+        #field {
+            flex-grow: 1;
+        }
+    </style>
+
+    <script type="text/javascript" src="main.js"></script>
+</head>
+<body>
+<h1>3D Mandelbrot</h1>
+
+<div id="field"></div>
+<div class="bottom_top">
+    Created by: <a href="https://twitter.com/bene2929">@bene2929</a>
+</div>
+
+</body>
+</html>
